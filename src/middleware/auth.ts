@@ -30,8 +30,6 @@ export const authMiddleware = (
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
     
-    console.log("decoded::: ", decoded);
-
     // Create user object with explicit type
     const user: User = {
       userId: decoded.userId

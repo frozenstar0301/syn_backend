@@ -1,20 +1,23 @@
+// src/controllers/fontController.ts
 import { Request, Response } from 'express';
+import { collection, query, orderBy, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { supabase } from '../config/supabase';
 
 export const getFonts = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { data, error } = await supabase
-      .from('fonts')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const fontsRef = collection(db, 'fonts');
+    const q = query(fontsRef, orderBy('created_at', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const fonts = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-    if (error) {
-      res.status(500).json({ error: 'Failed to fetch fonts' });
-      return;
-    }
-
-    res.json(data);
+    res.json(fonts);
   } catch (error) {
+    console.error('Error fetching fonts:', error);
     res.status(500).json({ error: 'Failed to fetch fonts' });
   }
 };
@@ -26,6 +29,7 @@ export const uploadFont = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
+    // Use Supabase for storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('fonts')
       .upload(`${Date.now()}-${req.file.originalname}`, req.file.buffer);
@@ -39,33 +43,28 @@ export const uploadFont = async (req: Request, res: Response): Promise<void> => 
       .from('fonts')
       .getPublicUrl(uploadData.path);
 
-    const { error: insertError } = await supabase
-      .from('fonts')
-      .insert([
-        {
-          url: publicUrl,
-          name: req.file.originalname.replace(/\.[^/.]+$/, ''),
-        },
-      ]);
+    // Use Firebase for database
+    const fontData = {
+      url: publicUrl,
+      name: req.file.originalname.replace(/\.[^/.]+$/, ''),
+      created_at: Timestamp.now()
+    };
 
-    if (insertError) {
-      res.status(500).json({ error: 'Failed to save to database' });
-      return;
-    }
-
+    const fontsRef = collection(db, 'fonts');
+    const docRef = await addDoc(fontsRef, fontData);
+    
     // Fetch all fonts after successful upload
-    const { data: allFonts, error: fetchError } = await supabase
-      .from('fonts')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (fetchError) {
-      res.status(500).json({ error: 'Failed to fetch fonts after upload' });
-      return;
-    }
+    const q = query(fontsRef, orderBy('created_at', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const allFonts = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
     res.status(201).json(allFonts);
   } catch (error) {
+    console.error('Error uploading font:', error);
     res.status(500).json({ error: 'Failed to upload font' });
   }
 };

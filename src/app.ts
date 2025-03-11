@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import imageRoutes from './routes/imageRoutes';
 import fontRoutes from './routes/fontRoutes';
 import screenRoutes from './routes/screenRoutes';
+import signupScreenRoutes from './routes/signupScreenRoutes';
 import userRoutes from './routes/userRoutes';
 
 dotenv.config();
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/api/images', imageRoutes);
 app.use('/api/fonts', fontRoutes);
 app.use('/api/screen', screenRoutes);
+app.use('/api/signupscreen', signupScreenRoutes);
 app.use('/api/users', userRoutes);
 
 app.listen(port, () => {
