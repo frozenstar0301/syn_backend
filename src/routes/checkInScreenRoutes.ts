@@ -1,5 +1,5 @@
 import express from 'express';
-import { getScreen, saveScreen } from '../controllers/signupScreenController';
+import { getScreen, saveScreen } from '../controllers/checkInController';
 
 const router = express.Router();
 

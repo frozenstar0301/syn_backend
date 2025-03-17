@@ -8,7 +8,7 @@ import { db } from '../config/firebase';
 
 export const getScreen = async (req: Request, res: Response) => {
   try {
-    const screensRef = collection(db, 'signupscreen');
+    const screensRef = collection(db, 'checkinrewardscreen');
     const q = query(screensRef, orderBy('created_at', 'desc'), limit(1));
     const querySnapshot = await getDocs(q);
     
@@ -39,7 +39,7 @@ export const saveScreen = async (req: Request, res: Response) => {
     };
 
     // Check if any record exists
-    const screensRef = collection(db, 'signupscreen');
+    const screensRef = collection(db, 'checkinrewardscreen');
     const q = query(screensRef, orderBy('created_at', 'desc'), limit(1));
     const querySnapshot = await getDocs(q);
     
@@ -47,7 +47,7 @@ export const saveScreen = async (req: Request, res: Response) => {
     if (!querySnapshot.empty) {
       // Update existing record
       const screenDoc = querySnapshot.docs[0];
-      const screenRef = doc(db, 'signupscreen', screenDoc.id);
+      const screenRef = doc(db, 'checkinrewardscreen', screenDoc.id);
       await updateDoc(screenRef, screenData);
       
       result = {
