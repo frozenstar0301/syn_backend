@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { collection, query, orderBy, getDocs, addDoc, Timestamp } from 'firebase/firestore';
-import { db, adminStorage } from '../config/firebase';
-import * as admin from 'firebase-admin';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../config/firebase';
 
 export const getImages = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -28,45 +28,19 @@ export const uploadImage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Get the bucket name directly from the admin app configuration
-    const bucketName = admin.app().options.storageBucket;
+    // Create a storage reference
+    const storageRef = ref(storage, `images/${Date.now()}-${req.file.originalname}`);
     
-    if (!bucketName) {
-      throw new Error('Storage bucket name is not available in the admin app configuration');
-    }
+    // Upload file to Firebase Storage
+    const snapshot = await uploadBytes(storageRef, req.file.buffer);
     
-    // Get the bucket with explicit name
-    const bucket = admin.storage().bucket(bucketName);
-    
-    // Create a file name with timestamp to ensure uniqueness
-    const filename = `images/${Date.now()}-${req.file.originalname}`;
-    
-    // Create a file object
-    const file = bucket.file(filename);
-    
-    // Upload the file buffer
-    await file.save(req.file.buffer, {
-      contentType: req.file.mimetype,
-      metadata: {
-        contentType: req.file.mimetype,
-        metadata: {
-          originalName: req.file.originalname
-        }
-      }
-    });
-    
-    // Make the file publicly accessible
-    await file.makePublic();
-    
-    // Get the public URL
-    const publicUrl = `https://storage.googleapis.com/${bucketName}/${filename}`;
+    // Get the download URL
+    const publicUrl = await getDownloadURL(snapshot.ref);
 
-    // Store metadata in Firestore
+    // Use Firebase for database
     const imageData = {
       url: publicUrl,
       name: req.file.originalname,
-      contentType: req.file.mimetype,
-      size: req.file.size,
       created_at: Timestamp.now()
     };
 
