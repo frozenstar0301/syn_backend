@@ -1,8 +1,7 @@
-// src/controllers/imageController.ts
 import { Request, Response } from 'express';
 import { collection, query, orderBy, getDocs, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { supabase } from '../config/supabase';
+import { db, adminStorage } from '../config/firebase';
+import * as admin from 'firebase-admin';
 
 export const getImages = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -29,24 +28,45 @@ export const uploadImage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Use Supabase for storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('images')
-      .upload(`${Date.now()}-${req.file.originalname}`, req.file.buffer);
-
-    if (uploadError) {
-      res.status(500).json({ error: 'Failed to upload to storage' });
-      return;
+    // Get the bucket name directly from the admin app configuration
+    const bucketName = admin.app().options.storageBucket;
+    
+    if (!bucketName) {
+      throw new Error('Storage bucket name is not available in the admin app configuration');
     }
+    
+    // Get the bucket with explicit name
+    const bucket = admin.storage().bucket(bucketName);
+    
+    // Create a file name with timestamp to ensure uniqueness
+    const filename = `images/${Date.now()}-${req.file.originalname}`;
+    
+    // Create a file object
+    const file = bucket.file(filename);
+    
+    // Upload the file buffer
+    await file.save(req.file.buffer, {
+      contentType: req.file.mimetype,
+      metadata: {
+        contentType: req.file.mimetype,
+        metadata: {
+          originalName: req.file.originalname
+        }
+      }
+    });
+    
+    // Make the file publicly accessible
+    await file.makePublic();
+    
+    // Get the public URL
+    const publicUrl = `https://storage.googleapis.com/${bucketName}/${filename}`;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('images')
-      .getPublicUrl(uploadData.path);
-
-    // Use Firebase for database
+    // Store metadata in Firestore
     const imageData = {
       url: publicUrl,
       name: req.file.originalname,
+      contentType: req.file.mimetype,
+      size: req.file.size,
       created_at: Timestamp.now()
     };
 

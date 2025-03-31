@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+dotenv.config();
+
 import imageRoutes from './routes/imageRoutes';
 import fontRoutes from './routes/fontRoutes';
 import screenRoutes from './routes/screenRoutes';
@@ -29,7 +32,7 @@ import historyRoutes from './routes/historyRoutes';
 import changesettingRoutes from './routes/changesettingRoutes';
 import bottomnavbarRoutes from './routes/bottomnavbarRoutes';
 
-dotenv.config();
+
 
 const app = express();
 const port = process.env.PORT || 3000;
